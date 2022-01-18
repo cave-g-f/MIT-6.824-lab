@@ -325,7 +325,7 @@ func (cfg *config) connect(i int) {
 }
 
 // detach server i from the net.
-func (cfg *config)  disconnect(i int) {
+func (cfg *config) disconnect(i int) {
 	// fmt.Printf("disconnect(%d)\n", i)
 
 	cfg.connected[i] = false
@@ -515,6 +515,7 @@ func (cfg *config) one(cmd interface{}, expectedServers int, retry bool) int {
 			if rf != nil {
 				index1, _, ok := rf.Start(cmd)
 				if ok {
+					DPrintf("server: %d start append entries!\n", starts)
 					index = index1
 					break
 				}

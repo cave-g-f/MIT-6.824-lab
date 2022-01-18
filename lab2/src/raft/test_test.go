@@ -59,14 +59,20 @@ func TestReElection2A(t *testing.T) {
 
 	leader1 := cfg.checkOneLeader()
 
+	DPrintf("leader selected: %d\n", leader1)
+
 	// if the leader disconnects, a new one should be elected.
 	cfg.disconnect(leader1)
+	DPrintf("leader %d disconnected\n", leader1)
 	cfg.checkOneLeader()
 
 	// if the old leader rejoins, that shouldn't
 	// disturb the new leader.
 	cfg.connect(leader1)
+	DPrintf("leader %d reconnect\n", leader1)
 	leader2 := cfg.checkOneLeader()
+
+	DPrintf("leader selected: %d\n", leader2)
 
 	// if there's no quorum, no leader should
 	// be elected.
@@ -156,6 +162,8 @@ func TestRPCBytes2B(t *testing.T) {
 	cfg.one(99, servers, false)
 	bytes0 := cfg.bytesTotal()
 
+	DPrintf("send bytes: %d\n", bytes0)
+
 	iters := 10
 	var sent int64 = 0
 	for index := 2; index < iters+2; index++ {
@@ -165,6 +173,7 @@ func TestRPCBytes2B(t *testing.T) {
 			t.Fatalf("got index %v but expected %v", xindex, index)
 		}
 		sent += int64(len(cmd))
+		DPrintf("send bytes: %d\n", int64(len(cmd)))
 	}
 
 	bytes1 := cfg.bytesTotal()
@@ -189,6 +198,7 @@ func TestFailAgree2B(t *testing.T) {
 	// disconnect one follower from the network.
 	leader := cfg.checkOneLeader()
 	cfg.disconnect((leader + 1) % servers)
+	DPrintf("disconnect follower: %d!\n", (leader+1)%servers)
 
 	// the leader and remaining follower should be
 	// able to agree despite the disconnected follower.
@@ -200,6 +210,7 @@ func TestFailAgree2B(t *testing.T) {
 
 	// re-connect
 	cfg.connect((leader + 1) % servers)
+	DPrintf("connect follower\n")
 
 	// the full set of servers should preserve
 	// previous agreements, and be able to agree
@@ -376,6 +387,8 @@ func TestRejoin2B(t *testing.T) {
 	leader1 := cfg.checkOneLeader()
 	cfg.disconnect(leader1)
 
+	DPrintf("disconnect leader: %d\n", leader1)
+
 	// make old leader try to agree on some entries
 	cfg.rafts[leader1].Start(102)
 	cfg.rafts[leader1].Start(103)
@@ -388,13 +401,19 @@ func TestRejoin2B(t *testing.T) {
 	leader2 := cfg.checkOneLeader()
 	cfg.disconnect(leader2)
 
+	DPrintf("disconnect leader: %d\n", leader2)
+
 	// old leader connected again
 	cfg.connect(leader1)
+
+	DPrintf("connect %d\n", leader1)
 
 	cfg.one(104, 2, true)
 
 	// all together now
 	cfg.connect(leader2)
+
+	DPrintf("connect %d\n", leader2)
 
 	cfg.one(105, servers, true)
 
@@ -416,6 +435,10 @@ func TestBackup2B(t *testing.T) {
 	cfg.disconnect((leader1 + 3) % servers)
 	cfg.disconnect((leader1 + 4) % servers)
 
+	DPrintf("disconnect %d\n", (leader1+2)%servers)
+	DPrintf("disconnect %d\n", (leader1+3)%servers)
+	DPrintf("disconnect %d\n", (leader1+4)%servers)
+
 	// submit lots of commands that won't commit
 	for i := 0; i < 50; i++ {
 		cfg.rafts[leader1].Start(rand.Int())
@@ -426,10 +449,17 @@ func TestBackup2B(t *testing.T) {
 	cfg.disconnect((leader1 + 0) % servers)
 	cfg.disconnect((leader1 + 1) % servers)
 
+	DPrintf("disconnect %d\n", (leader1+0)%servers)
+	DPrintf("disconnect %d\n", (leader1+1)%servers)
+
 	// allow other partition to recover
 	cfg.connect((leader1 + 2) % servers)
 	cfg.connect((leader1 + 3) % servers)
 	cfg.connect((leader1 + 4) % servers)
+
+	DPrintf("connect %d\n", (leader1+2)%servers)
+	DPrintf("connect %d\n", (leader1+3)%servers)
+	DPrintf("connect %d\n", (leader1+4)%servers)
 
 	// lots of successful commands to new group.
 	for i := 0; i < 50; i++ {
@@ -444,6 +474,8 @@ func TestBackup2B(t *testing.T) {
 	}
 	cfg.disconnect(other)
 
+	DPrintf("disconnect %d\n", other)
+
 	// lots more commands that won't commit
 	for i := 0; i < 50; i++ {
 		cfg.rafts[leader2].Start(rand.Int())
@@ -454,10 +486,15 @@ func TestBackup2B(t *testing.T) {
 	// bring original leader back to life,
 	for i := 0; i < servers; i++ {
 		cfg.disconnect(i)
+		DPrintf("disconnect %d\n", i)
 	}
 	cfg.connect((leader1 + 0) % servers)
 	cfg.connect((leader1 + 1) % servers)
 	cfg.connect(other)
+
+	DPrintf("connect %d\n", (leader1+0)%servers)
+	DPrintf("connect %d\n", (leader1+1)%servers)
+	DPrintf("connect %d\n", other)
 
 	// lots of successful commands to new group.
 	for i := 0; i < 50; i++ {
@@ -467,7 +504,9 @@ func TestBackup2B(t *testing.T) {
 	// now everyone
 	for i := 0; i < servers; i++ {
 		cfg.connect(i)
+		DPrintf("connect %d\n", i)
 	}
+
 	cfg.one(rand.Int(), servers, true)
 
 	cfg.end()
